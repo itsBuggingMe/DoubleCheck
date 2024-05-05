@@ -30,6 +30,7 @@ namespace DoubleCheck
 
         public readonly void UnScramble(ReadOnlySpan<BChar> characters, Span<BChar> output)
         {
+            //TODO: Debug this & remove %?
             int characterReadLoc = skipNum + offset + characters.Length;
 
             for(int i = 0; i < output.Length; i++)

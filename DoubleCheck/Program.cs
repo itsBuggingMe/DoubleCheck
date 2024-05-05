@@ -51,6 +51,8 @@ namespace DoubleCheck
 
             public static bool Check(Span<BChar> bChars)
             {
+                //TODO: speed up checks
+                //TODO: add processing to detect english words in case hints are wrong?
                 for(int i = 0; i < bChars.Length - 6; i++)
                 {
                     if(bChars.Slice(i).StartsWith("BETWEEN"))
