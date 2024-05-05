@@ -7,15 +7,10 @@ using System.Threading.Tasks;
 
 namespace DoubleCheck
 {
-    internal readonly struct BChar
+    [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal readonly struct BChar(byte value)
     {
-        private readonly byte _char;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public BChar(byte value)
-        {
-            _char = value;
-        }
-
+        public readonly byte _char = value;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator BChar(char value) => new BChar(ToByte(value));

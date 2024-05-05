@@ -35,7 +35,7 @@ namespace DoubleCheck
                     for (byte i = 0; i < alphabetKey.Length; i++)
                     {
                         BChar keyChar = alphabetKey[i];
-                        newTable[keyChar.AsIndex()] = new BChar(i);
+                        newTable[keyChar._char] = new BChar(i);
                         newAlphabet[i] = keyChar;
                     }
 
@@ -63,17 +63,38 @@ namespace DoubleCheck
             _at = 0;
         }
 
-        public readonly void UnScramble(ReadOnlySpan<BChar> characters, Span<BChar> output)
+        public readonly unsafe void UnScramble(ReadOnlySpan<BChar> characters, Span<BChar> output)
         {
-            var at = Scrambler.AllWords[this._at];
+            fixed (BChar* charPtr = &characters.GetPinnableReference())
+            fixed (BChar* outPtr = &output.GetPinnableReference())
+            fixed (BChar* tablePtr = _table)
+            fixed (byte* modTablePtr = mod26Table)
+            fixed (BChar* alphabetPtr = _alphabet)
+            {//new with ptr - removes CLR bounds check ~30% faster (unsafe though)
+                var at = Scrambler.AllWords[_at];
+                int len = at.Length;
+                int outputLen = output.Length;
+                int modCtr = 0;
+
+                for (int i = 0; i < outputLen; i++)
+                {
+                    outPtr[i] = alphabetPtr[modTablePtr[tablePtr[charPtr[i]._char]._char - tablePtr[at[modCtr]._char]._char + alphaLenByte]];
+
+                    if (++modCtr == len)
+                        modCtr = 0;
+                }
+            }
+            /*
+            var at = Scrambler.AllWords[_at];
             int len = at.Length;
+            int outputLen = output.Length;
             int modCtr = 0;
-            for (int i = 0; i < output.Length; i++)
+
+            for (int i = 0; i < outputLen; i++)
             {
-                int keyStreamIndex = _table[at[modCtr].AsIndex()].AsIndex();//keystream
-                int cipherTextIndex = characters[i].AsIndex();
-                int intermed = _table[cipherTextIndex].AsIndex() - keyStreamIndex + alphaLen;
-                output[i] = _alphabet[(byte)mod26Table[intermed]];
+                //byte keyStreamIndex = _table[at[modCtr].AsIndex()].AsIndex();//keystream
+
+                output[i] = _alphabet[mod26Table[_table[characters[i]._char]._char - _table[at[modCtr]._char]._char + alphaLenByte]];
 
                 // a b c d e f g h i j k l m n o p q r s t u v w x y z
 
@@ -86,28 +107,31 @@ namespace DoubleCheck
                 // 8  9  10 11 12 13 14 15 16 17 1  18 19 20 6  4  21 2  7  5  22 23 24 25 3  26
                 // h  i  j  k  l  m  n  o  p  q  a  r  s  t  f  d  u  b  g  e  v  w  x  y  c  z 
 
+                //modCtr = (modCtr + 1) % len; -> ~20% slower
+
                 if (++modCtr == len)
                     modCtr = 0;
-            }
+            }*/
         }
 
 
         private const int modLen = 26 * 26;
         private const int alphaLen = 26;
+        private const byte alphaLenByte = 26;
         private static readonly Dictionary<string, KeyCache> generatedTables = new();
-        private static readonly int[] mod26Table;
+        private static readonly byte[] mod26Table;
         public static bool MoveNext(ref VigenereCipher thing)
         {
             thing._at++;
-            return thing._at != Scrambler.NumWords;
+            return thing._at < Scrambler.NumWords;
         }
         static VigenereCipher()
         {
             //mod table
-            mod26Table = new int[modLen];
+            mod26Table = new byte[modLen];
             for (int i = 0; i < mod26Table.Length; i++)
             {
-                mod26Table[i] = i % 26;
+                mod26Table[i] = (byte)(i % 26);
             }
         }
     }

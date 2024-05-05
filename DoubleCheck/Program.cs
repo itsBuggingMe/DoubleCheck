@@ -7,15 +7,32 @@ namespace DoubleCheck
     {
         static void Main(string[] args)
         {
+            /*
             string cyText = "OBKRUOXOGHULBSOLIFBBWFLRVQQPRNGKSSOTWTQSJQSSEKZZWATJKLUDIAWINFBNYPVTTMZFPKWGDKZXTJCDIGKUHUAUEKCAR";
             cyText = "ENDyaHrOHNLSRHEOCPTEOIBIDYSHNAIACHTNREYULDSLLSLLNOHSNOSMRWXMNETPRNGATIHNRARPESLNNELEBLPIIACAEWMTWNDITEENRAHCTENEUDRETNHAEOETFOLSEDTIWENHAEIOYTEYQHEENCTAYCREIFTBRSPAMHHEWENATAMATEGYEERLBTEEFOASFIOTUETUAEOTOARMAEERTNRTIBSEDDNIAAHTTMSTEWPIEROAGRIEWFEBAECTDDHILCEIHSITEGOEAOSDDRYDLORITRKLMLEHAGTDHARDPNEOHMGFMFEUHEECDMRIPFEIMEHNLSSTTRTVDOHW".ToUpper();
+            
             OneLayerScramble<Transposition, KRYPTOS> t = new(
                 cipher: new Transposition(cyText.Length, -2, 2), 
                 cypherText: KRYPTOS.AsArray(cyText) //KRYPTOS.GetCleanCT(2, 4)
                 );
+             */
+
+            string cyText = "OBKRUOXOGHULBSOLIFBBWFLRVQQPRNGKSSOTWTQSJQSSEKZZWATJKLUDIAWINFBNYPVTTMZFPKWGDKZXTJCDIGKUHUAUEKCAR";
+            cyText = "ENDyaHrOHNLSRHEOCPTEOIBIDYSHNAIACHTNREYULDSLLSLLNOHSNOSMRWXMNETPRNGATIHNRARPESLNNELEBLPIIACAEWMTWNDITEENRAHCTENEUDRETNHAEOETFOLSEDTIWENHAEIOYTEYQHEENCTAYCREIFTBRSPAMHHEWENATAMATEGYEERLBTEEFOASFIOTUETUAEOTOARMAEERTNRTIBSEDDNIAAHTTMSTEWPIEROAGRIEWFEBAECTDDHILCEIHSITEGOEAOSDDRYDLORITRKLMLEHAGTDHARDPNEOHMGFMFEUHEECDMRIPFEIMEHNLSSTTRTVDOHW".ToUpper();
 
 
-            t.TryAllCombos();
+
+            for (int i = 0; i < 1000; i++)
+            {
+                OneLayerScramble<VigenereCipher, KRYPTOS> t = new(
+                    cipher: new VigenereCipher("KRYPTOS"),
+                    cypherText: KRYPTOS.GetCleanCT(0, 4) //KRYPTOS.AsArray(cyText) 
+                    );
+
+                t.TryAllCombos();
+            }
+
+
         }
 
         internal class KRYPTOS : IChecker
@@ -36,7 +53,7 @@ namespace DoubleCheck
             {
                 for(int i = 0; i < bChars.Length - 6; i++)
                 {
-                    if(bChars.Slice(i).StartsWith("SLOWLY"))
+                    if(bChars.Slice(i).StartsWith("BETWEEN"))
                     {
                         return true;
                     }

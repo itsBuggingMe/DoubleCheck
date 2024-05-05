@@ -32,8 +32,6 @@ namespace DoubleCheck
         {
             int characterReadLoc = skipNum + offset + characters.Length;
 
-            
-
             for(int i = 0; i < output.Length; i++)
             {
                 characterReadLoc %= characters.Length;
