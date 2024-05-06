@@ -40,5 +40,10 @@ namespace DoubleCheck
                 characterReadLoc += skipNum;
             }
         }
+
+        public object[] GetCurrentKeys()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

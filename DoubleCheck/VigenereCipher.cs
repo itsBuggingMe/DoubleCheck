@@ -84,7 +84,8 @@ namespace DoubleCheck
                         modCtr = 0;
                 }
             }
-            /*
+
+            /* //normal imp
             var at = Scrambler.AllWords[_at];
             int len = at.Length;
             int outputLen = output.Length;
@@ -125,6 +126,9 @@ namespace DoubleCheck
             thing._at++;
             return thing._at < Scrambler.NumWords;
         }
+
+        public readonly object[] GetCurrentKeys() => [Scrambler.AllWords[_at].ArrToString()];
+
         static VigenereCipher()
         {
             //mod table

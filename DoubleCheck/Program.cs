@@ -1,149 +1,79 @@
-﻿
-using System.Text;
+﻿using Microsoft.Extensions.Configuration;
 
 namespace DoubleCheck
 {
-    internal static class Program
+    internal class Program
     {
+        static int counter;
+        static object lockObj = new();
+
         static void Main(string[] args)
         {
-            /*
-            string cyText = "OBKRUOXOGHULBSOLIFBBWFLRVQQPRNGKSSOTWTQSJQSSEKZZWATJKLUDIAWINFBNYPVTTMZFPKWGDKZXTJCDIGKUHUAUEKCAR";
-            cyText = "ENDyaHrOHNLSRHEOCPTEOIBIDYSHNAIACHTNREYULDSLLSLLNOHSNOSMRWXMNETPRNGATIHNRARPESLNNELEBLPIIACAEWMTWNDITEENRAHCTENEUDRETNHAEOETFOLSEDTIWENHAEIOYTEYQHEENCTAYCREIFTBRSPAMHHEWENATAMATEGYEERLBTEEFOASFIOTUETUAEOTOARMAEERTNRTIBSEDDNIAAHTTMSTEWPIEROAGRIEWFEBAECTDDHILCEIHSITEGOEAOSDDRYDLORITRKLMLEHAGTDHARDPNEOHMGFMFEUHEECDMRIPFEIMEHNLSSTTRTVDOHW".ToUpper();
-            
-            OneLayerScramble<Transposition, KRYPTOS> t = new(
-                cipher: new Transposition(cyText.Length, -2, 2), 
-                cypherText: KRYPTOS.AsArray(cyText) //KRYPTOS.GetCleanCT(2, 4)
-                );
-             */
+            IConfiguration config = new ConfigurationBuilder()
+                .AddUserSecrets<Program>()
+                .Build();
 
-            string cyText = "OBKRUOXOGHULBSOLIFBBWFLRVQQPRNGKSSOTWTQSJQSSEKZZWATJKLUDIAWINFBNYPVTTMZFPKWGDKZXTJCDIGKUHUAUEKCAR";
-            cyText = "ENDyaHrOHNLSRHEOCPTEOIBIDYSHNAIACHTNREYULDSLLSLLNOHSNOSMRWXMNETPRNGATIHNRARPESLNNELEBLPIIACAEWMTWNDITEENRAHCTENEUDRETNHAEOETFOLSEDTIWENHAEIOYTEYQHEENCTAYCREIFTBRSPAMHHEWENATAMATEGYEERLBTEEFOASFIOTUETUAEOTOARMAEERTNRTIBSEDDNIAAHTTMSTEWPIEROAGRIEWFEBAECTDDHILCEIHSITEGOEAOSDDRYDLORITRKLMLEHAGTDHARDPNEOHMGFMFEUHEECDMRIPFEIMEHNLSSTTRTVDOHW".ToUpper();
+            string outputPath = config.GetSection("outputPath").Value;
+
+            var bArr = Helper.AsBCharArr(KRYPTOS.C_K1);
+            var logger = new FileLogger(outputPath);
 
 
 
-            for (int i = 0; i < 1000; i++)
+            try
             {
-                OneLayerScramble<VigenereCipher, KRYPTOS> t = new(
-                    cipher: new VigenereCipher("KRYPTOS"),
-                    cypherText: KRYPTOS.GetCleanCT(0, 4) //KRYPTOS.AsArray(cyText) 
-                    );
-
-                t.TryAllCombos();
-            }
-
-
-        }
-
-        internal class KRYPTOS : IChecker
-        {
-            private static readonly StringBuilder shared = new StringBuilder();
-
-            private static int Sum(Span<BChar> bChars)
-            {
-                int s = 0;
-                for (int i = 0; i < bChars.Length; i++)
-                    s += bChars[i];
-                return s;
-            }
-
-            private static readonly int BerlinSum = Sum(AsArray("BERLIN"));
-
-            public static bool Check(Span<BChar> bChars)
-            {
-                //TODO: speed up checks
-                //TODO: add processing to detect english words in case hints are wrong?
-                for(int i = 0; i < bChars.Length - 6; i++)
+                Parallel.For(0, Scrambler.AllWords.Length, i =>
                 {
-                    if(bChars.Slice(i).StartsWith("BETWEEN"))
+                    OneLayerScramble<VigenereCipher> t = new(
+                        cipher: new VigenereCipher(Scrambler.AllWordsString[i]),
+                        cypherText: bArr,
+                        saver: logger,
+                        title: "K1"
+                        );
+
+                    t.TryAllCombos();
+
+                    lock (lockObj)
                     {
-                        return true;
+                        counter++;
+
+                        if (counter % 4096 == 0)
+                        {
+                            Console.WriteLine("Done: " + counter);
+                        }
                     }
-                }
-
-                return false;
+                });
             }
-
-            public static BChar[] AsArray(string line)
+            catch (Exception ex)
             {
-                BChar[] arr = new BChar[line.Length];
-                for(int i = 0; i < arr.Length; i++)
-                {
-                    arr[i] = line[i];
-                }
-                return arr;
+                Console.WriteLine($"Failed with {ex.Message}\n{ex.ToString()}");
             }
-
-            public static BChar[] GetCleanCT(int startLine, int endLine)
+            finally
             {
-                string[] lines = CypherText.Split("\r\n");
-
-                if(startLine < 0 || endLine >= lines.Length)
-                    throw new ArgumentException("nonono");
-
-                BChar[] finalText = new BChar[lines[startLine..endLine].Sum(l => l.Length)];
-                int counter = 0;
-                for(int i = startLine; i < endLine; i++)
-                {
-                    foreach (char thing in lines[i])
-                    {
-                        finalText[counter++] = thing;
-                    }
-                }
-
-                return finalText;
+                Console.WriteLine("Done");
+                Console.WriteLine();
             }
-
-            public static readonly string CypherText = 
-                "EMUFPHZLRFAXYUSDJKZLDKRNSHGNFIVJ\r\n" +
-                "YQTQUXQBQVYUVLLTREVJYQTMKYRDMFD\r\n" +
-                "VFPJUDEEHZWETZYVGWHKKQETGFQJNCE\r\n" +
-                "GGWHKKDQMCPFQZDQMMIAGPFXHQRLG\r\n" +//GGWHKK?DQMCPFQZDQMMIAGPFXHQRLG
-                "TIMVMZJANQLVKQEDAGDVFRPJUNGEUNA\r\n" +
-                "QZGZLECGYUXUEENJTBJLBQCRTBJDFHRR\r\n" +
-                "YIZETKZEMVDUFKSJHKFWHKUWQLSZFTI\r\n" +
-                "HHDDDUVH?DWKBFUFPWNTDFIYCUQZERE\r\n" +
-                "EVLDKFEZMOQQJLTTUGSYQPFEUNLAVIDX\r\n" +
-                "FLGGTEZ?FKZBSFDQVGOGIPUFXHHDRKF\r\n" +
-                "FHQNTGPUAECNUVPDJMQCLQUMUNEDFQ\r\n" +
-                "ELZZVRRGKFFVOEEXBDMVPNFQXEZLGRE\r\n" +
-                "DNQFMPNZGLFLPMRJQYALMGNUVPDXVKP\r\n" +
-                "DQUMEBEDMHDAFMJGZNUPLGEWJLLAETG\r\n" +
-                "ENDYAHROHNLSRHEOCPTEOIBIDYSHNAIA\r\n" +
-                "CHTNREYULDSLLSLLNOHSNOSMRWXMNE\r\n" +
-                "TPRNGATIHNRARPESLNNELEBLPIIACAE\r\n" +
-                "WMTWNDITEENRAHCTENEUDRETNHAEOE\r\n" +
-                "TFOLSEDTIWENHAEIOYTEYQHEENCTAYCR\r\n" +
-                "EIFTBRSPAMHHEWENATAMATEGYEERLB\r\n" +
-                "TEEFOASFIOTUETUAEOTOARMAEERTNRTI\r\n" +
-                "BSEDDNIAAHTTMSTEWPIEROAGRIEWFEB\r\n" +
-                "AECTDDHILCEIHSITEGOEAOSDDRYDLORIT\r\n" +
-                "RKLMLEHAGTDHARDPNEOHMGFMFEUHE\r\n" +
-                "ECDMRIPFEIMEHNLSSTTRTVDOHWOBKR\r\n" +//ECDMRIPFEIMEHNLSSTTRTVDOHW?OBKR
-                "UOXOGHULBSOLIFBBWFLRVQQPRNGKSSO\r\n" +
-                "TWTQSJQSSEKZZWATJKLUDIAWINFBNYP\r\n" +
-                "VTTMZFPKWGDKZXTJCDIGKUHUAUEKCAR";
         }
 
-        public static bool StartsWith(this Span<BChar> bString, string s)
-        {
-            for (int i = 0; i < s.Length; i++)
-            {
-                if (s[i] != bString[i])
-                    return false;
-            }
 
-            return true;
-        }
 
-        public static string ArrToString(this BChar[] arr)
+        internal class KRYPTOS
         {
-            StringBuilder stringBuilder = new StringBuilder();
-            foreach(var r in arr)
-            {
-                stringBuilder.Append((char)r);
-            }
-            return stringBuilder.ToString();
+            #region CypherText
+            public const string KEY = "KRYPTOS";
+            public const string K1_KEY = "PALIMPSEST";
+            public const string K2_KEY = "ABSCISSA";
+
+            public const string D_K1 = "EMUFPHZLRFAXYUSDJKZLDKRNSHGNFIVJ YQTQUXQBQVYUVLLTREVJYQTMKYRDMFD";
+            public const string D_K2 = "VFPJUDEEHZWETZYVGWHKKQETGFQJNCE GGWHKK?DQMCPFQZDQMMIAGPFXHQRLG TIMVMZJANQLVKQEDAGDVFRPJUNGEUNA QZGZLECGYUXUEENJTBJLBQCRTBJDFHRR YIZETKZEMVDUFKSJHKFWHKUWQLSZFTI HHDDDUVH?DWKBFUFPWNTDFIYCUQZERE EVLDKFEZMOQQJLTTUGSYQPFEUNLAVIDX FLGGTEZ?FKZBSFDQVGOGIPUFXHHDRKF FHQNTGPUAECNUVPDJMQCLQUMUNEDFQ ELZZVRRGKFFVOEEXBDMVPNFQXEZLGRE DNQFMPNZGLFLPMRJQYALMGNUVPDXVKP DQUMEBEDMHDAFMJGZNUPLGEWJLLAETG";
+            public const string D_K3 = "ENDYAHROHNLSRHEOCPTEOIBIDYSHNAIA CHTNREYULDSLLSLLNOHSNOSMRWXMNE TPRNGATIHNRARPESLNNELEBLPIIACAE WMTWNDITEENRAHCTENEUDRETNHAEOE TFOLSEDTIWENHAEIOYTEYQHEENCTAYCR EIFTBRSPAMHHEWENATAMATEGYEERLB TEEFOASFIOTUETUAEOTOARMAEERTNRTI BSEDDNIAAHTTMSTEWPIEROAGRIEWFEB AECTDDHILCEIHSITEGOEAOSDDRYDLORIT RKLMLEHAGTDHARDPNEOHMGFMFEUHE ECDMRIPFEIMEHNLSSTTRTVDOHW?";
+            public const string D_K4 = "OBKR UOXOGHULBSOLIFBBWFLRVQQPRNGKSSO TWTQSJQSSEKZZWATJKLUDIAWINFBNYP VTTMZFPKWGDKZXTJCDIGKUHUAUEKCAR";
+
+            public static readonly string C_K1 = string.Join(string.Empty, D_K1.Split(' ', '?'));
+            public static readonly string C_K2 = string.Join(string.Empty, D_K2.Split(' ', '?'));
+            public static readonly string C_K3 = string.Join(string.Empty, D_K3.Split(' ', '?'));
+            public static readonly string C_K4 = string.Join(string.Empty, D_K4.Split(' ', '?'));
+            #endregion;
         }
     }
 }

@@ -33,15 +33,4 @@ namespace DoubleCheck
 
         public static BChar None = new BChar(byte.MaxValue);
     }
-
-    internal static class Extensions
-    {
-        public static string ToString(this BChar[] arr)
-        {
-            StringBuilder sb = new StringBuilder(arr.Length);
-            for(int i = 0; i < arr.Length; i++)
-                sb.Append((char)arr[i]);
-            return sb.ToString();
-        }
-    }
 }
