@@ -3,35 +3,54 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace DoubleCheck
 {
-    internal class OneLayerScramble<TCipher>(TCipher cipher, BChar[] cypherText, IResultSaver saver, string title) 
-        : Scrambler(0, 0, saver, title) where TCipher : struct, ICipher<TCipher>
+    internal class OneLayerScramble<TChecker, TCipher>(TChecker checker, TCipher cipher, FChar[] cypherText, IResultSaver saver, string title) 
+        : Scrambler(saver, title) where TCipher : struct, ICipher<TCipher> where TChecker : IChecker
     {
-        private TCipher _cipher = cipher;
-
         public override void TryAllCombos()
         {
-            ReadOnlySpan<BChar> ctext = cypherText;
-            BChar[] bChar = new BChar[ctext.Length];
+            ReadOnlySpan<FChar> ctext = cypherText;
 
-            //11_000 per pair, chosen through the scientific process of guess and check
-            const int CharThreshold = 14_000;
-            int threshold = ctext.Length * CharThreshold;
+            int checkIndex = checker.GetIndex();
 
-            while (TCipher.MoveNext(ref _cipher))
+            ReadOnlySpan<FChar> match = checker.GetMatch();
+            int matchLength = match.Length;
+
+            while (TCipher.MoveNext(ref cipher))
             {
-                _cipher.UnScramble(ctext, bChar);
+                int checkStart = 0;
+                FChar currentChar;
 
-                // bi-gram analysis for score
-                int score = GetBiGramScore(bChar);
-
-                if (score > threshold)
+                do
                 {
-                    resultSaver.Save(new PotentialSolution(title, bChar.ArrToString(), score, _cipher.GetCurrentKeys()));
-                }
+                    currentChar = cipher.UnScramble(ctext, checkIndex + checkStart);
+
+                    if (checkStart == matchLength)
+                    {
+                        SaveCurrentState();
+                        break;
+                    }
+                } while (match[checkIndex++] == currentChar);
             }
+
+
+            ////11_000 per pair, chosen through the scientific process of guess and check
+            //const int CharThreshold = 14_000;
+            //int threshold = ctext.Length * CharThreshold;
+            // bi-gram analysis for score
+            //int score = GetBiGramScore(bChar);
+        }
+
+        private StringBuilder sb = new StringBuilder();
+
+        private void SaveCurrentState()
+        {
+            for(int i = 0; i < cypherText.Length; i++)
+                sb.Append(cipher.UnScramble(cypherText, i));
+            resultSaver.Save(new PotentialSolution(title, sb.ToString(), 0, cipher.GetCurrentKeys()));
         }
     }
 }

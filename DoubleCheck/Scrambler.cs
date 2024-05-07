@@ -9,32 +9,25 @@ namespace DoubleCheck
 {
     internal abstract class Scrambler
     {
-        protected readonly int StartIndex;
-        protected readonly int Count;
         protected readonly IResultSaver resultSaver;
         protected readonly string title;
 
-        public Scrambler(int startIndex, int count, IResultSaver saver, string title)
+        public Scrambler(IResultSaver saver, string title)
         {
-            if (startIndex < 0 || startIndex + count > AllWords.Length)
-                throw new ArgumentException("Bad");
-
             resultSaver = saver;
-            StartIndex = startIndex;
-            Count = count;
             this.title = title;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int GetBiGramScore(Span<BChar> bChars)
+        public static int GetBiGramScore(Span<FChar> bChars)
         {
             int score = 0;
             int len = bChars.Length - 1;
 
-            byte l = bChars[0]._char;
+            int l = bChars[0].Value;
             for (int i = 1; i < len; i++)
             {
-                byte r = bChars[i]._char;
+                int r = bChars[i].Value;
                 score += BiGramTable[l * 26 + r];
                 l = r;
             }
@@ -45,24 +38,27 @@ namespace DoubleCheck
         public abstract void TryAllCombos();
 
         public static int NumWords => AllWords.Length;
-        public static readonly BChar[][] AllWords;
+        public static readonly FChar[][] AllWords;
         public static readonly string[] AllWordsString;
         public static readonly int[] BiGramTable;
 
         static Scrambler()
         {
+            //TODO: Remove doubles
+            //TODO: reimplement custom checkerse
+
             string[] raw = File.ReadAllLines("words.txt");
             AllWords = raw
                 .Select(s => 
-                    s.Where(char.IsLetter).Select(c => (BChar)char.ToUpper(c)).ToArray()
+                    s.Where(char.IsLetter).Select(c => (FChar)char.ToUpper(c)).ToArray()
                     )
-                .Where(arr => arr.Length > 0)
+                .Where(arr => arr.Length > 0 && arr.Length < 26)
                 .ToArray();
             AllWordsString = raw
                 .Select(s =>
                     s.Where(char.IsLetter).Select(c => char.ToUpper(c)).ToArray()
                     ).Select(carr => new string(carr))
-                .Where(arr => arr.Length > 0)
+                .Where(arr => arr.Length > 0 && arr.Length < 26)
                 .ToArray();
 
             BiGramTable = new int[26 * 26 * 26];
@@ -76,9 +72,9 @@ namespace DoubleCheck
 
             for (int i = 0; i < rawScores.Length; i++)
             {
-                BChar left = char.ToUpper(rawScores[i].Item1[0]);
-                BChar right = char.ToUpper(rawScores[i].Item1[1]);
-                BiGramTable[left._char * 26 + right._char] = (int)(rawScores[i].Item2 / 2858953);//squash it down
+                FChar left = char.ToUpper(rawScores[i].Item1[0]);
+                FChar right = char.ToUpper(rawScores[i].Item1[1]);
+                BiGramTable[left.Value * 26 + right.Value] = (int)(rawScores[i].Item2 / 2858953);//squash it down
             }
         }
     }

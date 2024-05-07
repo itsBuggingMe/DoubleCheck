@@ -4,9 +4,6 @@ namespace DoubleCheck
 {
     internal class Program
     {
-        static int counter;
-        static object lockObj = new();
-
         static void Main(string[] args)
         {
             IConfiguration config = new ConfigurationBuilder()
@@ -15,50 +12,59 @@ namespace DoubleCheck
 
             string outputPath = config.GetSection("outputPath").Value;
 
-            var bArr = Helper.AsBCharArr(KRYPTOS.C_K1);
-            var logger = new FileLogger(outputPath);
-
-
-
             try
             {
-                Parallel.For(0, Scrambler.AllWords.Length, i =>
-                {
-                    OneLayerScramble<VigenereCipher> t = new(
-                        cipher: new VigenereCipher(Scrambler.AllWordsString[i]),
-                        cypherText: bArr,
-                        saver: logger,
-                        title: "K1"
-                        );
-
-                    t.TryAllCombos();
-
-                    lock (lockObj)
-                    {
-                        counter++;
-
-                        if (counter % 4096 == 0)
-                        {
-                            Console.WriteLine("Done: " + counter);
-                        }
-                    }
-                });
+                Run(outputPath);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed with {ex.Message}\n{ex.ToString()}");
+                Console.WriteLine($"Failed with {ex.Message}\n{ex}");
             }
             finally
             {
                 Console.WriteLine("Done");
-                Console.WriteLine();
+                Console.ReadLine();
             }
         }
 
+        static volatile int counter;
+        static readonly object lockObj = new();
 
-
-        internal class KRYPTOS
+        private static void Run(string outputPath)
         {
+            var bArr = Helper.AsBCharArr(KRYPTOS.C_K1);
+            var logger = new FileLogger(outputPath);
+
+            Parallel.For(0, Scrambler.AllWords.Length, i =>
+            {
+                OneLayerScramble<KRYPTOS, VigenereCipher> t = new(
+                    checker: KRYPTOS.Instance,
+                    cipher: new VigenereCipher(Scrambler.AllWordsString[i]),
+                    cypherText: bArr,
+                    saver: logger,
+                    title: "K4"
+                    );
+
+                t.TryAllCombos();
+
+                int ctrCopy;
+                lock (lockObj)
+                    ctrCopy = ++counter;
+
+                if (counter % 4096 == 0)
+                    Console.WriteLine("Done: " + counter);
+            });
+        }
+
+        internal class KRYPTOS : IChecker
+        {
+            public static KRYPTOS Instance { get; } = new();
+
+            public int GetIndex() => C_K4.IndexOf("NYPVTT");
+
+            private readonly FChar[] fChars = "BERLIN".AsBCharArr();
+            public ReadOnlySpan<FChar> GetMatch() => fChars;
+
             #region CypherText
             public const string KEY = "KRYPTOS";
             public const string K1_KEY = "PALIMPSEST";

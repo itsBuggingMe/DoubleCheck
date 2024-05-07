@@ -6,10 +6,12 @@ using System.Threading.Tasks;
 
 namespace DoubleCheck
 {
-    internal interface ICipher<TSelf>
+    internal interface ICipher<TSelf> where TSelf : struct
     {
-        void UnScramble(ReadOnlySpan<BChar> characters, Span<BChar> output);
+        FChar UnScramble(ReadOnlySpan<FChar> characters, int index);
+        
         public object[] GetCurrentKeys();
         static abstract bool MoveNext(ref TSelf thing);
+        static abstract void ResetCounter(ref TSelf thing);
     }
 }

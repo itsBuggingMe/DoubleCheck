@@ -8,29 +8,23 @@ using System.Threading.Tasks;
 namespace DoubleCheck
 {
     [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal readonly struct BChar(byte value)
+    internal readonly struct FChar(int value)
     {
-        public readonly byte _char = value;
+        public readonly int Value = value;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static implicit operator BChar(char value) => new BChar(ToByte(value));
+        public static implicit operator FChar(char value) => new FChar(ToByte(value));
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static implicit operator char(BChar value) => ToChar(value._char);
+        public static implicit operator char(FChar value) => ToChar(value.Value);
 
-        public static char ToChar(byte value) => (char)('A' + value);
-        public static byte ToByte(char value) => (byte)(value - 'A');
+        public static char ToChar(int value) => (char)('A' + value);
+        public static int ToByte(char value) => (int)(value - 'A');
 
         public override string ToString()
         {
-            return ToChar(_char).ToString();
+            return ToChar(Value).ToString();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int AsIndex()
-        {
-            return _char;
-        }
-
-        public static BChar None = new BChar(byte.MaxValue);
+        public static FChar None = new FChar(int.MaxValue);
     }
 }
